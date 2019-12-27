@@ -5,7 +5,6 @@ import socket
 import json
 import threading
 import sys
-import time
 
 # IP地址和端口绑定
 if len(sys.argv) < 3:
