@@ -1,7 +1,6 @@
 import threading
 import socket
 import json
-import os
 import sys
 
 class Client():
@@ -67,12 +66,11 @@ class Client():
         elif mode == "l":
             msg["type"] = "show"
         elif mode == "e":
-            sys.exit()
+            msg["type"] = "exit"
         else:
             msg["type"] = ""
             print("Wrong command.\n Currently support: b(broadcast) s(solo) l(list all users) e(exit).")
-        msg = json.dumps(msg)
-        msg = bytes(msg, encoding='utf-8')
+
         return msg
   
     # 开启不同线程
@@ -83,7 +81,11 @@ class Client():
         self.login()
         while True:
             msg = self.pack()
-            self.sock.sendto(msg, self.serverAddr)
+            msgbin = json.dumps(msg)
+            msgbin = bytes(msgbin, encoding='utf-8')
+            self.sock.sendto(msgbin, self.serverAddr)
+            if msg["type"] == "exit":
+                sys.exit(0)
 
 # 程序入口点
 if __name__ == "__main__":

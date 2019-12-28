@@ -1,7 +1,5 @@
-import time
 import socket
 import json
-import os
 import sys
 
 class Server():
@@ -9,7 +7,8 @@ class Server():
     def __init__(self, address: tuple):
         self.addr = address
         self.userList = {}
-        print("[*] Srever started on {}:{}.".format(addr[0], addr[1]))
+        self.userOnline = []
+        print("[*] Server started on {}:{}.".format(addr[0], addr[1]))
         self.recieve(self.addr)
 
     # 向指定的地址发送数据
@@ -27,9 +26,12 @@ class Server():
     def auth(self, auth: dict, addr: tuple):
         if auth["name"] not in self.userList:
             self.addUser(auth,addr)
+            self.userOnline.append(auth["name"])
             return True
         else:
             if auth["pwd"] == self.userList[auth["name"]]["pwd"]:
+                if auth["name"] not in self.userOnline:
+                    self.userOnline.append(auth["name"])
                 return True
             else:
                 return False
@@ -37,18 +39,18 @@ class Server():
     # 发送单人消息
     def solo(self, text: str, addr, username: str =""):
         text = bytes(text, encoding="utf-8")
-        if username in self.userList:
+        if username in self.userOnline:
             addr = self.userList[username]["addr"]
             print("[*] Send secret message to {}.".format(username))
             self.send(text,addr)
         else:
-            print("[!] Message sending failed.")
+            print("[!] Message sending failed. Target user offline?")
             self.send(text,addr)
 
     # 发送多人消息（广播）
     def boardcast(self, text: str):
         text = bytes(text, encoding='utf-8')
-        for user in self.userList:
+        for user in self.userOnline:
             print("[*] Boardcasting message :{}".format(str(text, encoding="utf-8")))
             self.send(text,self.userList[user]["addr"])
 
@@ -60,15 +62,17 @@ class Server():
                 self.boardcast(text)
             elif msg["type"] == "solo":
                 text = ("[Secret] "+msg["auth"]["name"]+": "+msg["text"])
-                self.solo(text,addr,msg["toWho"],)
-            elif msg["type"]=="notice":
+                self.solo(text,addr,msg["toWho"])
+            elif msg["type"] == "notice":
                 text = ("[System] "+msg["auth"]["name"]+" joined the chatroom.")
                 self.boardcast(text)
-            elif msg["type"]=="show":
+            elif msg["type"] == "show":
                 text = "[System] All online users:\n"
-                for user in self.userList:
+                for user in self.userOnline:
                     text = text + user + "\n"
-                self.solo(text,addr)
+                self.solo(text,addr,msg["auth"]["name"])
+            elif msg["type"] == "exit":
+                self.userOnline.remove(msg["auth"]["name"])
             else:
                 pass
         else:
